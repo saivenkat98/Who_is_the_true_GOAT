@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <style>
+    #tooltip {
+      position: absolute;
+      pointer-events: none;
+      background-color: rgba(255, 255, 255, 0.9);
+      border: 1px solid #000;
+      border-radius: 4px;
+      padding: 5px;
+      font-family: sans-serif;
+      font-size: 14px;
+    }
+  </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Final Project - IV</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet"
+      integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+
+</head>
+
+<body>
+  <nav class="navbar  bg-primary navbar-expand-lg bg-body-tertiary " data-bs-theme="dark">
+    <div class="container-fluid">
+        <a class="navbar-brand mb-0 h1" href="#">THE GOAT DEBATE AND TEAM COMPARISION</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+            data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+            aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item">
+                    <a class="nav-link active" aria-current="page" href="index.html">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="treemap.html">Tree Map</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="top34.html">top 34</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="parallel_coordinate.html">Parallel Coordinate</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="timeseries.html">Time Series</a>
+                </li>
+                <li class="nav-item dropdown bg-danger">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                        aria-expanded="false">
+                        Team Members
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#">Rishi Vamshi Athinarap</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item" href="#">Anudeep Billa</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item" href="#">Sai Teja Avadhootha</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item" href="#">Sai Venkat Kumar Rapol</a></li>
+
+                    </ul>
+                </li>
+            </ul>
+            <span class="navbar-text">
+                Information Visualisation - Group 6
+            </span>
+        </div>
+    </div>
+</nav>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
+integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe"
+crossorigin="anonymous"></script>
+  <div id="tooltip" style="position: absolute; opacity: 0; pointer-events: none;"></div>
+
+  <button id="selectBtn">Select</button>
+  <button id="unselectBtn">Reset</button>
+
+  <script type="module">
+    import { preprocessData } from './dataset_preprocessing.js';
+
+    function sortPlayersByEfficiency(players) {
+      return players.sort((a, b) => b.Efficiency - a.Efficiency);
+    }
+
+    const margin = { top: 20, right: 20, bottom: 40, left: 20 };
+    const width = 1300 - margin.left - margin.right;
+    const height = 500 - margin.top - margin.bottom;
+
+    const svg = d3.select("body")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+    preprocessData((groupedPlayers) => {
+
+      let selectionMode = false;
+
+      d3.select("#selectBtn").on("click", () => {
+        selectionMode = true;
+      });
+
+      d3.select("#unselectBtn").on("click", () => {
+        window.location.reload();
+      });
+
+      d3.csv("datasets/top75.csv").then(data => {
+        const format = d3.format(".1f");
+
+        data.forEach(player => {
+          player.PTS = parseFloat(format(player.PTS));
+          player.TRB = parseFloat(format(player.TRB));
+          player.AST = parseFloat(format(player.AST));
+          player.STL = parseFloat(format(player.STL));
+          player.BLK = parseFloat(format(player.BLK));
+
+          player.Efficiency = player.PTS + player.TRB + player.AST + player.STL + player.BLK;
+        });
+
+        const sortedData = sortPlayersByEfficiency(data);
+
+        const combinedMap = new Map();
+        sortedData.forEach(player => {
+          const playerName = player.Player;
+          if (groupedPlayers.has(playerName)) {
+            combinedMap.set(playerName, groupedPlayers.get(playerName));
+          }
+        });
+
+        console.log(combinedMap);
+
+        const playerAttributeSums = new Map();
+
+        combinedMap.forEach((seasons, playerName) => {
+          let attributeSums = {
+            PTS: 0,
+            TRB: 0,
+            AST: 0,
+            STL: 0,
+            BLK: 0,
+            TOV: 0,
+            FGA: 0,
+            FG: 0,
+            FTA: 0,
+            FT: 0
+          };
+
+          seasons.forEach(season => {
+            const gamesPlayed = parseFloat(season.G);
+            attributeSums.TRB += parseFloat(season.TRB) / gamesPlayed;
+            attributeSums.AST += parseFloat(season.AST) / gamesPlayed;
+            attributeSums.STL += parseFloat(season.STL) / gamesPlayed;
+            attributeSums.BLK += parseFloat(season.BLK) / gamesPlayed;
+            attributeSums.TOV += parseFloat(season.TOV) / gamesPlayed;
+            attributeSums.PTS += parseFloat(season.PTS) / gamesPlayed;
+            attributeSums.FGA += parseFloat(season.FGA) / gamesPlayed;
+            attributeSums.FG += parseFloat(season.FG) / gamesPlayed;
+            attributeSums.FTA += parseFloat(season.FTA) / gamesPlayed;
+            attributeSums.FT += parseFloat(season.FT) / gamesPlayed;
+
+          });
+
+          const numSeasons = seasons.length;
+          attributeSums.TRB /= numSeasons;
+          attributeSums.AST /= numSeasons;
+          attributeSums.STL /= numSeasons;
+          attributeSums.BLK /= numSeasons;
+          attributeSums.TOV /= numSeasons;
+          attributeSums.PTS /= numSeasons;
+          attributeSums.FGA /= numSeasons;
+          attributeSums.FG /= numSeasons;
+          attributeSums.FTA /= numSeasons;
+          attributeSums.FT /= numSeasons;
+
+          playerAttributeSums.set(playerName, attributeSums);
+        });
+
+        playerAttributeSums.forEach((attributeSums, playerName) => {
+          const basicPlayerScore = (attributeSums.PTS + attributeSums.TRB + attributeSums.AST + attributeSums.STL + attributeSums.BLK) - (attributeSums.FGA - attributeSums.FG + attributeSums.FTA - attributeSums.FT + attributeSums.TOV);
+          attributeSums.basicPlayerScore = basicPlayerScore;
+        });
+
+        console.log(playerAttributeSums);
+
+        function getTopNPlayers(players, attribute, n) {
+          return [...players.entries()]
+            .sort((a, b) => b[1][attribute] - a[1][attribute])
+            .slice(0, n)
+            .map(([playerName, attributes]) => ({ name: playerName, value: attributes[attribute] }));
+        }
+
+        const top20PlayersByBasicPlayerScore = getTopNPlayers(playerAttributeSums, "basicPlayerScore", 10);
+
+        console.log(top20PlayersByBasicPlayerScore);
+
+        const finalMap = new Map();
+
+        top20PlayersByBasicPlayerScore.forEach(player => {
+          const playerName = player.name;
+          if (groupedPlayers.has(playerName)) {
+            finalMap.set(playerName, groupedPlayers.get(playerName));
+          }
+        });
+
+        console.log("finalMap");
+        console.log(finalMap);
+
+        function processPlayers(finalMap) {
+          const result = [];
+
+          for (const [playerName, playerStats] of finalMap) {
+            let totalPER = 0;
+            const sumStats = playerStats.map(row => {
+              const AST = parseFloat(row["AST"]);
+              const TRB = parseFloat(row["TRB"]);
+              const PTS = parseFloat(row["PTS"]);
+              const STL = parseFloat(row["STL"]);
+              const BLK = parseFloat(row["BLK"]);
+              const TOV = parseFloat(row["TOV"]);
+              const FGA = parseFloat(row["FGA"]);
+              const FG = parseFloat(row["FG"]);
+              const FTA = parseFloat(row["FTA"]);
+              const FT = parseFloat(row["FT"]);
+              const G = parseFloat(row["G"]);
+              return {
+                year: row["Season"],
+                playerName: row["Player"],
+                sum: (AST + TRB + PTS) / G,
+              };
+            });
+            result.push({ playerName, sumStats });
+          }
+          return result;
+        }
+        const top10Players = processPlayers(finalMap);
+        console.log(">>>>>>TOP10PLAYERS>>>>>>>>", top10Players);
+
+        let maxSumStatsIndex = 0;
+        for (let i = 1; i < top10Players.length; i++) {
+          if (top10Players[i].sumStats.length > top10Players[maxSumStatsIndex].sumStats.length) {
+            maxSumStatsIndex = i;
+          }
+        }
+
+        const xScale = d3.scalePoint().range([0, width]);
+
+        const yScale = d3.scaleLinear().rangeRound([height, 0]);
+
+        const line = d3.line()
+          .x((d, i) => xScale(i + 1))
+          .y(d => d ? yScale(d.sum) : null);
+
+        const allSumStats = top10Players.flatMap(player => player.sumStats);
+        xScale.domain(top10Players[maxSumStatsIndex].sumStats.map((d, i) => `${i + 1}`));
+
+        yScale.domain([d3.min(allSumStats, d => d.sum), d3.max(allSumStats, d => d.sum)]);
+
+        svg.append("g")
+          .attr("transform", `translate(0,${height})`)
+          .call(d3.axisBottom(xScale))
+          .append("text")
+          .attr("fill", "#000")
+          .attr("x", width)
+          .attr("dy", "-0.5em")
+          .attr("text-anchor", "end")
+          .text("Year");
+
+        svg.append("g")
+          .call(d3.axisLeft(yScale))
+          .append("text")
+          .attr("fill", "#000")
+          .attr("transform", "rotate(-90)")
+          .attr("y", 6)
+          .attr("dy", "0.71em")
+          .attr("text-anchor", "end")
+          .text("Sum");
+
+        const colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+        const selectedPlayers = new Set();
+
+        console.log("top10Players", top10Players);
+        top10Players.forEach((player, index) => {
+
+          const playerData = player.sumStats.map(stats => ({ year: stats.year, playerName: stats.playerName, sum: stats.sum }));
+
+          const linePath = svg.append("path")
+            .datum(playerData)
+            .attr("class", `line-${index}`)
+            .attr("fill", "none")
+            .attr("stroke", colorScale(index))
+            .attr("stroke-linejoin", "round")
+            .attr("stroke-linecap", "round")
+            .attr("stroke-width", 3)
+            .attr("d", line);
+
+          const lineCircles = svg.selectAll(`.circle-${index}`)
+            .data(playerData)
+            .enter()
+            .append("circle")
+            .attr("cx", (d, i) => xScale(i + 1))
+            .attr("cy", d => yScale(d.sum))
+            .attr("r", 3)
+            .attr("fill", colorScale(index))
+            .attr("class", `circle circle-${index}`);
+
+
+          linePath.on("click", function (d, i) {
+            if (selectionMode) {
+              console.log(i);
+              const playerName = i[0].playerName;
+              const currentStrokeWidth = d3.select(this).attr("stroke-width");
+
+              if (currentStrokeWidth == 3) {
+                d3.select(this).attr("stroke-width", 6);
+                d3.select(this).attr("stroke-opacity", 1);
+                selectedPlayers.add(playerName);
+              } else {
+                d3.select(this).attr("stroke-width", 3);
+                selectedPlayers.delete(playerName);
+              }
+
+              console.log(selectedPlayers);
+
+              svg.selectAll("path")
+                .attr("stroke-opacity", function (d, i) {
+                  if (d) {
+                    console.log("hello my dear");
+                    console.log("d", d);
+                    console.log(i);
+                    return selectedPlayers.has(d[0].playerName) ? 1 : 0.1;
+                  }
+                  return 0.3;
+                });
+            } else {
+              d3.selectAll("path")
+                .attr("stroke-width", 3)
+                .attr("stroke-opacity", 1);
+              selectedPlayers.clear();
+            }
+          });
+
+          lineCircles.on("mouseover", function (event, d) {
+            d3.select("#tooltip")
+              .style("opacity", 1)
+              .html(`Player: ${d.playerName}<br>Score: ${d.sum.toFixed(2)}`);
+          })
+            .on("mousemove", function (event) {
+              d3.select("#tooltip")
+                .style("left", (event.pageX + 10) + "px")
+                .style("top", (event.pageY + 10) + "px");
+            })
+            .on("mouseout", function () {
+              d3.select("#tooltip")
+                .style("opacity", 0);
+            });
+        });
+      }).catch(error => {
+        console.error("Error loading the dataset:", error);
+      });
+    });
+  </script>
+</body>
+
+</html>

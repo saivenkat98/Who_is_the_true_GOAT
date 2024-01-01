@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Treemap</title>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Final Project - IV</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ" crossorigin="anonymous">
+
+</head>
+
+<body>
+    <nav class="navbar  bg-primary navbar-expand-lg bg-body-tertiary " data-bs-theme="dark">
+        <div class="container-fluid">
+            <a class="navbar-brand mb-0 h1" href="#">THE GOAT DEBATE AND TEAM COMPARISION</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+                aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="index.html">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="treemap.html">Tree Map</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="top34.html">top 34</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="parallel_coordinate.html">Parallel Coordinate</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="timeseries.html">Time Series</a>
+                    </li>
+                    <li class="nav-item dropdown bg-danger">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                            aria-expanded="false">
+                            Team Members
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#">Rishi Vamshi Athinarap</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item" href="#">Anudeep Billa</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item" href="#">Sai Teja Avadhootha</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item" href="#">Sai Venkat Kumar Rapol</a></li>
+
+                        </ul>
+                    </li>
+                </ul>
+                <span class="navbar-text">
+                    Information Visualisation - Group 6
+                </span>
+            </div>
+        </div>
+    </nav>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe"
+    crossorigin="anonymous"></script>
+    <script type="module">
+        import { preprocessData } from './dataset_preprocessing.js';
+
+        function treeMap(groups) {
+            const playerAttributeSums = new Map();
+
+            groups.forEach((seasons, playerName) => {
+                let attributeSums = {
+                    PTS: 0,
+                    TRB: 0,
+                    AST: 0,
+                    STL: 0,
+                    BLK: 0,
+                    TOV: 0
+                };
+
+                seasons.forEach(season => {
+                    const gamesPlayed = parseFloat(season.G);
+                    attributeSums.TRB += parseFloat(season.TRB) / gamesPlayed;
+                    attributeSums.AST += parseFloat(season.AST) / gamesPlayed;
+                    attributeSums.STL += parseFloat(season.STL) / gamesPlayed;
+                    attributeSums.BLK += parseFloat(season.BLK) / gamesPlayed;
+                    attributeSums.TOV += parseFloat(season.TOV) / gamesPlayed;
+                    attributeSums.PTS += parseFloat(season.PTS) / gamesPlayed;
+                });
+
+                const numSeasons = seasons.length;
+                attributeSums.TRB /= numSeasons;
+                attributeSums.AST /= numSeasons;
+                attributeSums.STL /= numSeasons;
+                attributeSums.BLK /= numSeasons;
+                attributeSums.TOV /= numSeasons;
+                attributeSums.PTS /= numSeasons;
+
+                playerAttributeSums.set(playerName, attributeSums);
+            });
+
+
+            function getTopNPlayers(players, attribute, n) {
+                return [...players.entries()]
+                    .sort((a, b) => b[1][attribute] - a[1][attribute])
+                    .slice(0, n)
+                    .map(([playerName, attributes]) => ({ name: playerName, value: attributes[attribute] }));
+            }
+
+            const hierarchyData = {
+                name: "attributes",
+                children: [
+                    { name: "PTS", children: getTopNPlayers(playerAttributeSums, "PTS", 40) },
+                    { name: "TRB", children: getTopNPlayers(playerAttributeSums, "TRB", 40) },
+                    { name: "AST", children: getTopNPlayers(playerAttributeSums, "AST", 40) },
+                    { name: "STL", children: getTopNPlayers(playerAttributeSums, "STL", 40) },
+                    { name: "BLK", children: getTopNPlayers(playerAttributeSums, "BLK", 40) },
+                    { name: "TOV", children: getTopNPlayers(playerAttributeSums, "TOV", 40) }
+                ],
+            };
+
+            console.log(hierarchyData);
+
+            const width = 1000;
+            const height = 600;
+            const margin = { top: 10, right: 10, bottom: 10, left: 10 };
+
+            const colorScale = d3.scaleOrdinal()
+                .domain(["TRB", "AST", "STL", "BLK", "TOV", "PTS"])
+                .range(d3.schemeSet2);
+
+            const categories = [
+                { name: "TRB", color: d3.schemeSet2[0] },
+                { name: "AST", color: d3.schemeSet2[1] },
+                { name: "STL", color: d3.schemeSet2[2] },
+                { name: "BLK", color: d3.schemeSet2[3] },
+                { name: "TOV", color: d3.schemeSet2[4] },
+                { name: "PTS", color: d3.schemeSet2[5] },
+            ];
+
+            function createLegend(svg, categories) {
+                const legend = svg.append("g")
+                    .attr("class", "legend")
+                    .attr("transform", `translate(${margin.left},${margin.top + 30})`);
+
+                const legendItems = legend.selectAll("g")
+                    .data(categories)
+                    .enter()
+                    .append("g")
+                    .attr("transform", (d, i) => `translate(${i * 120}, 0)`);
+
+                legendItems.append("rect")
+                    .attr("width", 10)
+                    .attr("height", 10)
+                    .attr("fill", d => d.color);
+
+                legendItems.append("text")
+                    .attr("x", 15)
+                    .attr("y", 10)
+                    .text(d => d.name)
+                    .attr("font-size", "12px");
+            }
+
+            const treemapLayout = d3.treemap()
+                .size([width, height])
+                .padding(2);
+
+            function normalizeAndApplyPowerTransformation(data, exponent) {
+                data.children.forEach(attribute => {
+                    let sum = 0;
+                    attribute.children.forEach(player => {
+                        sum += player.value;
+                    });
+
+                    attribute.children.forEach(player => {
+                        const normalizedValue = player.value / sum;
+                        player.value = Math.pow(normalizedValue, exponent);
+                    });
+                });
+
+                return data;
+            }
+
+            const transformedHierarchyData = normalizeAndApplyPowerTransformation(hierarchyData, 2);
+
+            const root = d3.hierarchy(transformedHierarchyData)
+                .sum(d => d.value)
+                .sort(() => Math.random() - 0.5);
+
+            treemapLayout(root);
+
+            const svg = d3.select("body")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom + 30);
+
+            const legendGroup = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const treemapGroup = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top + 60})`);
+
+            createLegend(legendGroup, categories);
+
+            const leaf = treemapGroup.selectAll("g")
+                .data(root.leaves())
+                .enter()
+                .append("g")
+                .attr("transform", d => `translate(${d.x0},${d.y0})`);
+
+            leaf.append("rect")
+                .attr("width", d => d.x1 - d.x0)
+                .attr("height", d => d.y1 - d.y0)
+                .attr("fill", d => colorScale(d.parent.data.name));
+
+            function getFontSize(width, height) {
+                const minDimension = Math.min(width, height);
+                return Math.max(8, minDimension / 4);
+            }
+
+            function wrapText(text, width, fontSize) {
+                const words = text.split(" ");
+                const lines = [];
+                let currentLine = words[0];
+
+                for (let i = 1; i < words.length; i++) {
+                    const word = words[i];
+                    const newLine = currentLine + " " + word;
+
+                    if (newLine.length * fontSize * 0.6 > width) {
+                        lines.push(currentLine);
+                        currentLine = word;
+                    } else {
+                        currentLine = newLine;
+                    }
+                }
+
+                lines.push(currentLine);
+                return lines;
+            }
+
+            leaf.each(function (d) {
+                const tileWidth = d.x1 - d.x0;
+                const tileHeight = d.y1 - d.y0;
+                const fontSize = getFontSize(tileWidth, tileHeight);
+                const textLines = wrapText(d.data.name, tileWidth, fontSize);
+
+                const text = d3.select(this).append("text")
+                    .attr("x", 3)
+                    .attr("font-size", fontSize + "px")
+                    .attr("fill", "black");
+
+                text.selectAll("tspan")
+                    .data(textLines)
+                    .enter()
+                    .append("tspan")
+                    .attr("x", 3)
+                    .attr("dy", (d, i) => (i === 0 ? fontSize : fontSize * 1.2) + "px")
+                    .text(d => d);
+            });
+        }
+        preprocessData(treeMap);
+    </script>
+</body>
+
+</html>
